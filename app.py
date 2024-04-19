@@ -31,8 +31,8 @@ id,name,start_date,end_date,frequency,amount,currency,obs
     df.start_date = df.start_date.astype("datetime64[ns]")
     df.end_date = df.end_date.astype("datetime64[ns]")
     df.amount = df.amount.astype("int64")
-    df.currency = df.currency.astype("currency")
-    df.frequency = df.frequency.astype("frequency")
+    df.currency = df.currency.astype("category")
+    df.frequency = df.frequency.astype("category")
     return df
 
 
