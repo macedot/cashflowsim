@@ -3,10 +3,10 @@ import pandas as pd
 import streamlit as st
 from streamlit_extras.altex import _chart
 
-st.set_page_config(layout="centered", page_title="Data Editor", page_icon="🧮")
+st.set_page_config(layout="centered", page_title="Cashflow Simulator", page_icon="🧮")
 
-st.title("📊 Data to Chart")
-st.caption("This is a demo of the `st.data_editor`.")
+st.title("📊 Cashflow Simulator")
+st.caption("Simulate your income & expense cashflow over the next months!")
 
 "Let viewers edit your data and see how that impacts the rest of the app!"
 
@@ -61,13 +61,13 @@ def get_active_hist(df: pd.DataFrame) -> alt.Chart:
     )
 
 
-with st.echo():
-    df = get_data()
-    edited_df = st.data_editor(
-        df,
-        use_container_width=True,
-        num_rows="dynamic",
-    )
+# with st.echo():
+df = get_data()
+edited_df = st.data_editor(
+    df,
+    use_container_width=True,
+    num_rows="dynamic",
+)
 
 st.caption("Modify cells above 👆 or even ➕ add rows, and check out the impacts below 👇")
 
