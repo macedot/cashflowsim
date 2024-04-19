@@ -1,6 +1,7 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
+from io import StringIO
 from streamlit_extras.altex import _chart
 
 st.set_page_config(layout="centered", page_title="Cashflow Simulator", page_icon="🧮")
@@ -13,7 +14,7 @@ st.caption("Simulate your income & expense cashflow over the next months!")
 
 @st.cache_data
 def get_data() -> pd.DataFrame:
-    df = pd.DataFrame('''
+    df = pd.read_csv(StringIO('''
 id,name,start_date,end_date,frequency,amount,currency,obs
 1,Salary,2024-01-25,,monthly,3232,EUR,Electronic Arts
 2,Rent,2024-01-05,,monthly,-1300,EUR,5D
@@ -26,7 +27,7 @@ id,name,start_date,end_date,frequency,amount,currency,obs
 9,paga13,2024-06-25,,annual,3232,EUR,Electronic Arts
 10,paga14,2024-12-25,,annual,3232,EUR,Electronic Arts
 11,Fatura Iberia,2024-04-15,,none,-1500,EUR,Primeira fatura Iberia Credit Card
-''')
+'''), sep=",")
     df.start_date = df.start_date.astype("datetime64[ns]")
     df.end_date = df.end_date.astype("datetime64[ns]")
     df.amount = df.amount.astype("int64")
