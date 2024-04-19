@@ -1,5 +1,11 @@
+#!/bin/bash
 mkdir -p ~/.streamlit/
-echo "\
-[theme]\n\
-base="dark"\n\
-" > ~/.streamlit/config.toml
+echo -e '
+[theme]
+base="dark"
+[server]
+runOnSave=true
+maxUploadSize=2000
+[browser]
+gatherUsageStats = true
+' > ~/.streamlit/config.toml
