@@ -98,6 +98,7 @@ def last_day_of_month(any_day):
     return next_month - datetime.timedelta(days=next_month.day)
 
 
+def main():
 st.set_page_config(layout="wide", page_title="Cashflow Simulator", page_icon="🧮")
 
 st.title("📊 Cashflow Simulator")
@@ -200,3 +201,10 @@ chart = (bar + line).properties(height=600)  # .interactive()
 st.altair_chart(chart, theme="streamlit", use_container_width=True)
 with tab2:
     st.dataframe(df_result, hide_index=True, use_container_width=True)
+
+
+
+
+if __name__ == "__main__":
+    main()    
+
