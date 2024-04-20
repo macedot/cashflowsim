@@ -12,6 +12,7 @@ END_OF_YEAR = TODAY.date().replace(month=12, day=31)
 DATE_MAX = TODAY + relativedelta(years=+1)
 
 INPUT_HEADER = ['name', 'start_date', 'end_date', 'frequency', 'value', 'currency', 'obs']
+INPUT_HEADER = ['name', 'start_date', 'end_date', 'frequency', 'value', 'currency', 'obs']
 FREQUENCIES = {
     'none': None,
     'daily': relativedelta(days=+1),
@@ -193,10 +194,10 @@ with tab1:
         tooltip=['cashflow', 'balance', 'items']
     )
     bar = base.mark_bar().encode(y='cashflow:Q')
-    line = base.mark_line(color='red',
-                          interpolate='step-after',
-                          opacity=0.75).encode(y='balance:Q')
-    chart = (bar + line).properties(height=600)  # .interactive()
-    st.altair_chart(chart, theme="streamlit", use_container_width=True)
+line = base.mark_line(color='red',
+                      interpolate='step-after',
+                      opacity=0.75).encode(y='balance:Q')
+chart = (bar + line).properties(height=600)  # .interactive()
+st.altair_chart(chart, theme="streamlit", use_container_width=True)
 with tab2:
     st.dataframe(df_result, hide_index=True, use_container_width=True)
