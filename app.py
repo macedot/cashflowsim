@@ -12,7 +12,6 @@ END_OF_YEAR = TODAY.date().replace(month=12, day=31)
 DATE_MAX = TODAY + relativedelta(years=+1)
 
 INPUT_HEADER = ['name', 'start_date', 'end_date', 'frequency', 'value', 'currency', 'obs']
-INPUT_HEADER = ['name', 'start_date', 'end_date', 'frequency', 'value', 'currency', 'obs']
 FREQUENCIES = {
     'none': None,
     'daily': relativedelta(days=+1),
