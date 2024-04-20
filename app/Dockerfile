@@ -1,20 +1,18 @@
-FROM python:3.9-slim
+FROM alpine:latest
 
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
+RUN apk update && apk add \
     curl \
-    software-properties-common \
-    git \
+    python3 \
+    py3-pip \
+    py3-pyarrow \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/macedot/cashflowsim .
+COPY . /app
+WORKDIR /app
 
-RUN pip3 install -r requirements.txt
+RUN pip3 install --break-system-packages -r requirements.txt
 
 EXPOSE 8501
-
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
