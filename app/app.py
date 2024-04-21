@@ -106,6 +106,7 @@ def setup_input_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df['end_date'] = pd.to_datetime(df['end_date'], format='%Y-%m-%d')
     df['value'] = df['value'].astype("int64")
     df['frequency'] = df['frequency'].astype("string")
+    df['obs'] = df['obs'].astype("string")
     return df
 
 
