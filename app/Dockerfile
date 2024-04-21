@@ -7,10 +7,12 @@ RUN apk update && apk add \
     py3-pyarrow \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /app
 WORKDIR /app
 
+COPY requirements.txt /app
 RUN pip3 install --break-system-packages -r requirements.txt
+
+COPY . /app/
 
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health

@@ -1,7 +1,6 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-from io import StringIO
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -12,54 +11,49 @@ DATE_MAX = TODAY + relativedelta(years=+1)
 
 INPUT_HEADER = ['name', 'start_date', 'end_date', 'frequency', 'value', 'obs']
 FREQUENCIES = {
-    'none': None,
     'daily': relativedelta(days=+1),
     'weekly':  relativedelta(weeks=+1),
     'monthly': relativedelta(months=+1),
     'quarterly': relativedelta(months=+3),
     'semi-annual': relativedelta(months=+6),
-    'annual': relativedelta(year=+1),
+    'annual': relativedelta(years=+1),
 }
 
 
 def is_date_valid(date) -> bool:
-    try:
-        if not date or type(date) != 'str':
-            return False
-        datetime.strptime(date, '%Y-%m-%d')
-        return True
-    except ValueError:
-        return False
+    return date and not pd.isnull(date) and date != pd.NaT
 
 
 def get_next_date(current_date: datetime, frequency: str) -> datetime:
-    if not frequency in FREQUENCIES or FREQUENCIES[frequency] is None:
+    if not frequency or frequency not in FREQUENCIES or FREQUENCIES[frequency] is None:
         return None
     return current_date + FREQUENCIES[frequency]
 
 
 def get_first_date(event: dict, cf_begin: datetime, cf_end: datetime) -> datetime:
-    if cf_end < event['start_date']:
+    start_date = event['start_date']
+    if cf_end < start_date:
         return None  # event starts after end of cashflow period
 
     if is_date_valid(event['end_date']):
         if event['end_date'] < cf_begin:
             return None  # event ends before begin of cashflow period
 
-    if not event['frequency'] or event['frequency'] == 'none' or (is_date_valid(event['end_date']) and event['start_date'] == event['end_date']):
-        return event['start_date']  # No frequency / start_date equals end_date
+    if not event['frequency'] or (is_date_valid(event['end_date']) and start_date == event['end_date']):
+        return start_date  # No frequency / start_date equals end_date
 
     if event['frequency'] == 'daily':
         return cf_begin  # for daily events, return the begin of cashflow period
 
-    current_date = event['start_date']
+    current_date = start_date
     while current_date < cf_begin:
         current_date = get_next_date(current_date, event['frequency'])
     return current_date
 
 
-def generate_cashflows(events: list, cf_period: list[datetime]) -> pd.DataFrame:
-    cf_begin, cf_end = cf_period
+def generate_cashflows(events: list[dict],
+                       cf_begin: pd.Timestamp,
+                       cf_end: pd.Timestamp) -> pd.DataFrame:
     assert (cf_begin <= cf_end)
     cf_list = {}
     for event in events:
@@ -67,11 +61,12 @@ def generate_cashflows(events: list, cf_period: list[datetime]) -> pd.DataFrame:
             continue
         current_date = get_first_date(event, cf_begin, cf_end)
         while current_date and cf_begin <= current_date <= cf_end:
-            if is_date_valid(event['end_date']) and current_date < event['end_date']:
+            if is_date_valid(event['end_date']) and event['end_date'] < current_date:
                 break
             if not current_date in cf_list:
                 cf_list[current_date] = []
-            cf_list[current_date].append({'name': event['name'], 'value': event['value']})
+            cf = {'name': event['name'], 'value': event['value']}
+            cf_list[current_date].append(cf)
             current_date = get_next_date(current_date, event['frequency'])
     cashflows = []
     for k, v in sorted(cf_list.items()):
@@ -85,9 +80,8 @@ def generate_cashflows(events: list, cf_period: list[datetime]) -> pd.DataFrame:
 
 
 def balance_from_cashflows(initial_balance_value: int,
-                           simulation_period: tuple[datetime],
+                           sim_start: pd.Timestamp,
                            cashflows: list) -> pd.DataFrame:
-    sim_start, _ = simulation_period
     initial_cf = [{
         'date': sim_start,
         'cashflow': 0,
@@ -102,40 +96,42 @@ def balance_from_cashflows(initial_balance_value: int,
     return pd.DataFrame.from_records(cf_list)
 
 
-def last_day_of_month(any_day):
-    # The day 28 exists in every month. 4 days later, it's always next month
-    next_month = any_day.replace(day=28) + datetime.timedelta(days=4)
-    # subtracting the number of the current day brings us back one month
-    return next_month - datetime.timedelta(days=next_month.day)
+def create_input_dataframe() -> pd.DataFrame:
+    return pd.DataFrame(columns=INPUT_HEADER)
 
 
-def process_file(uploadedFile) -> pd.DataFrame:
-    df = pd.DataFrame()
-    try:
-        df = pd.read_excel(uploadedFile)
-    except:
-        try:
-            df = pd.read_csv(uploadedFile)
-        except:
-            st.error('Invalid file format', icon="🚨")
-            st.stop()
-    for col in df.columns.values.tolist():
-        if col not in INPUT_HEADER:
-            df.drop(columns=[col], inplace=True)
-            st.warning(f'Column ignored at input file: {col}', icon="🚨")
-    df.columns = INPUT_HEADER
-    df.name = df.name.astype("string")
-    df.start_date = pd.to_datetime(df.start_date, errors='coerce').dt.date
-    df.end_date = pd.to_datetime(df.end_date, errors='coerce').dt.date
-    df.value = df.value.astype("int64")
-    df.frequency = df.frequency.astype("category")
+def setup_input_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    df['name'] = df['name'].astype("string")
+    df['start_date'] = pd.to_datetime(df['start_date'], format='%Y-%m-%d')
+    df['end_date'] = pd.to_datetime(df['end_date'], format='%Y-%m-%d')
+    df['value'] = df['value'].astype("int64")
+    df['frequency'] = df['frequency'].astype("string")
     return df
+
+
+def load_input_data(uploadedFile=None) -> pd.DataFrame:
+    df = create_input_dataframe()
+    if uploadedFile:
+        try:
+            df = pd.read_excel(uploadedFile)
+        except:
+            try:
+                df = pd.read_csv(uploadedFile)
+            except:
+                st.error('Invalid file format', icon="🚨")
+                st.stop()
+        for col in df.columns.values.tolist():
+            if col not in INPUT_HEADER:
+                df.drop(columns=[col], inplace=True)
+                st.warning(f'Column ignored at input file: {col}', icon="🚨")
+    return setup_input_dataframe(df)
 
 
 def main():
     st.set_page_config(layout='wide', page_title="Cashflow Simulator", page_icon="🧮")
     st.title("📊 Cashflow Simulator")
     st.caption("Simulate your income & expenditure cash flow over the next few months.")
+
     "Fill in your financial events or upload a file and simulate your cash flows."
 
     initial_balance_value = st.number_input("Current Balance",
@@ -149,7 +145,52 @@ def main():
         format="YYYY.MM.DD",
     )
 
-    with st.expander("Load Data"):
+    data_config = {
+        "name": st.column_config.TextColumn(
+            "Event Name",
+            help="Name of the event",
+            width="small",
+            required=True,
+            max_chars=50,
+        ),
+        "start_date": st.column_config.DateColumn(
+            "Start Date",
+            width="small",
+            required=True,
+            format="YYYY.MM.DD",
+            step=1,
+        ),
+        "end_date": st.column_config.DateColumn(
+            "End Date",
+            width="small",
+            format="YYYY.MM.DD",
+            step=1,
+        ),
+        "frequency": st.column_config.SelectboxColumn(
+            "Event Frequency",
+            help="Frequency of the event",
+            width="small",
+            options=list(FREQUENCIES.keys()),
+        ),
+        "value": st.column_config.NumberColumn(
+            "Event Value",
+            help="Value that the event generates",
+            width="small",
+            required=True,
+            step=1,
+        ),
+        "obs": st.column_config.TextColumn(
+            "Obs",
+            help="Personal notes about the event",
+            width="medium",
+            max_chars=50,
+        ),
+    }
+
+    if 'df' not in st.session_state:
+        st.session_state.df = load_input_data()
+
+    with st.expander("Upload Data"):
         uploadedFile = st.file_uploader("Choose a CSV file",
                                         type=['csv', 'xlsx'],
                                         accept_multiple_files=False,
@@ -157,84 +198,27 @@ def main():
                                         help="Upload a CSV/XLSX file with the columns: '" + ", ".join(INPUT_HEADER) + "'")
         if uploadedFile is not None:
             st.success('File loaded successfully', icon="🎉")
-            loaded_df = process_file(uploadedFile)
-            if 'loaded' not in st.session_state:
-                st.session_state.loaded = True
-                st.session_state.df = loaded_df
-                st.session_state.df.reset_index(drop=True, inplace=True)
-
-    if 'df' not in st.session_state:
-        st.session_state.df = pd.read_csv(StringIO(",".join(INPUT_HEADER)), sep=",")
-        st.session_state.df.reset_index(drop=True, inplace=True)
-
-    def on_change_data_editor():
-        st.write(df_edited.to_dict(orient="records"))
+            st.session_state.df = load_input_data(uploadedFile)
 
     df_edited = st.data_editor(
         st.session_state.df,
         num_rows="dynamic",
         hide_index=True,
         use_container_width=True,
-        on_change=on_change_data_editor,
+        column_config=data_config,
         key="data_editor",
-        column_config={
-            "name": st.column_config.TextColumn(
-                "Event Name",
-                help="Name of the event",
-                width="small",
-                required=True,
-                max_chars=50,
-            ),
-            "start_date": st.column_config.DateColumn(
-                "Start Date",
-                min_value=TODAY + relativedelta(days=+1),
-                max_value=TODAY + relativedelta(years=+1),
-                width="small",
-                required=True,
-                format="YYYY-MM-DD",
-                step=1,
-            ),
-            "end_date": st.column_config.DateColumn(
-                "End Date",
-                min_value=TODAY + relativedelta(days=+1),
-                max_value=TODAY + relativedelta(years=+1),
-                width="small",
-                required=False,
-                format="YYYY-MM-DD",
-                step=1,
-            ),
-            "frequency": st.column_config.SelectboxColumn(
-                "Event Frequency",
-                help="Frequency of the event",
-                width="small",
-                required=True,
-                options=list(FREQUENCIES.keys()),
-            ),
-            "value": st.column_config.NumberColumn(
-                "Event Value",
-                help="Value that the event generates",
-                width="small",
-                required=True,
-                step=1,
-            ),
-            "obs": st.column_config.TextColumn(
-                "Obs",
-                help="Personal notes about the event",
-                width="medium",
-                required=False,
-                max_chars=50,
-            ),
-        },
     )
+
     st.caption("Modify cells above 👆 or even ➕ add rows, and check out the impacts below 👇")
+
     eventData = df_edited.to_dict(orient="records")
-    cashflows = generate_cashflows(eventData, simulation_period)
-    df_result = balance_from_cashflows(initial_balance_value, simulation_period, cashflows)
+    sim_start, sim_end = [pd.Timestamp(d) for d in simulation_period]
+    cashflows = generate_cashflows(eventData, sim_start, sim_end)
+    df_result = balance_from_cashflows(initial_balance_value, pd.Timestamp(TODAY), cashflows)
     tab1, tab2 = st.tabs(["Result Graph", "Result Data"])
     with tab1:
         base = alt.Chart(df_result).encode(
             alt.X('yearmonthdate(date):T').axis(title='Date'),
-            tooltip=['cashflow', 'balance', 'items']
         )
         bar = base.mark_bar().encode(y='cashflow:Q')
         line = base.mark_line(color='red', interpolate='step-after', opacity=0.75).encode(y='balance:Q')
@@ -246,4 +230,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
