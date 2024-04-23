@@ -135,64 +135,63 @@ def main():
 
     "Fill in your financial events or upload a file and simulate your cash flows."
 
-    initial_balance_value = st.number_input("Current Balance",
-                                            value=1000,
-                                            placeholder="Initial balance to consider on cashflow simulation...")
-    simulation_period = st.date_input(
-        "Select the simulation period",
-        (TOMORROW, END_OF_YEAR),
-        TOMORROW,
-        DATE_MAX,
-        format="YYYY.MM.DD",
-    )
-
-    data_config = {
-        "name": st.column_config.TextColumn(
-            "Event Name",
-            help="Name of the event",
-            width="small",
-            required=True,
-            max_chars=50,
-        ),
-        "start_date": st.column_config.DateColumn(
-            "Start Date",
-            width="small",
-            required=True,
-            format="YYYY.MM.DD",
-            step=1,
-        ),
-        "end_date": st.column_config.DateColumn(
-            "End Date",
-            width="small",
-            format="YYYY.MM.DD",
-            step=1,
-        ),
-        "frequency": st.column_config.SelectboxColumn(
-            "Event Frequency",
-            help="Frequency of the event",
-            width="small",
-            options=list(FREQUENCIES.keys()),
-        ),
-        "value": st.column_config.NumberColumn(
-            "Event Value",
-            help="Value that the event generates",
-            width="small",
-            required=True,
-            step=1,
-        ),
-        "obs": st.column_config.TextColumn(
-            "Obs",
-            help="Personal notes about the event",
-            width="medium",
-            max_chars=50,
-        ),
-    }
-
     if 'df' not in st.session_state:
         st.session_state.df = load_input_data()
 
-    with st.expander("Upload Data"):
-        uploadedFile = st.file_uploader("Choose a CSV file",
+    with st.expander("Simulation Parameters"):
+        initial_balance_value = st.number_input("Current Balance",
+                                                value=1000,
+                                                placeholder="Initial balance to consider on cashflow simulation...")
+        simulation_period = st.date_input(
+            "Select the simulation period",
+            (TOMORROW, END_OF_YEAR),
+            TOMORROW,
+            DATE_MAX,
+            format="YYYY.MM.DD",
+        )
+    
+        data_config = {
+            "name": st.column_config.TextColumn(
+                "Event Name",
+                help="Name of the event",
+                width="small",
+                required=True,
+                max_chars=50,
+            ),
+            "start_date": st.column_config.DateColumn(
+                "Start Date",
+                width="small",
+                required=True,
+                format="YYYY.MM.DD",
+                step=1,
+            ),
+            "end_date": st.column_config.DateColumn(
+                "End Date",
+                width="small",
+                format="YYYY.MM.DD",
+                step=1,
+            ),
+            "frequency": st.column_config.SelectboxColumn(
+                "Event Frequency",
+                help="Frequency of the event",
+                width="small",
+                options=list(FREQUENCIES.keys()),
+            ),
+            "value": st.column_config.NumberColumn(
+                "Event Value",
+                help="Value that the event generates",
+                width="small",
+                required=True,
+                step=1,
+            ),
+            "obs": st.column_config.TextColumn(
+                "Obs",
+                help="Personal notes about the event",
+                width="medium",
+                max_chars=50,
+            ),
+        }
+        uploadedFile = st.file_uploader("Upload your saved events file",
                                         type=['csv', 'xlsx'],
                                         accept_multiple_files=False,
                                         key="eventsUploader",
