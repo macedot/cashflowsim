@@ -74,7 +74,7 @@ def generate_cashflows(events: list[dict],
             'date': k,
             'cashflow': sum([item['value'] for item in v]),
             'balance': 0,
-            'items': v
+            'items': str(v)
         })
     return cashflows
 
@@ -86,7 +86,7 @@ def balance_from_cashflows(initial_balance_value: int,
         'date': sim_start,
         'cashflow': 0,
         'balance': initial_balance_value,
-        'items': []
+        'items': ''
     }]
     running_balance = initial_balance_value
     for cf in cashflows:
@@ -149,7 +149,7 @@ def main():
             DATE_MAX,
             format="YYYY.MM.DD",
         )
-    
+
         data_config = {
             "name": st.column_config.TextColumn(
                 "Event Name",
@@ -221,11 +221,16 @@ def main():
             alt.X('yearmonthdate(date):T').axis(title='Date'),
         )
         bar = base.mark_bar().encode(y='cashflow:Q')
-        line = base.mark_line(color='red', interpolate='step-after', opacity=0.75).encode(y='balance:Q')
+        line = base.mark_line(color='red',
+                              thickness=10,
+                              interpolate='step-after',
+                              opacity=0.75).encode(y='balance:Q')
         chart = (bar + line).properties(height=600)  # .interactive()
         st.altair_chart(chart, theme="streamlit", use_container_width=True)
     with tab2:
-        st.dataframe(df_result, hide_index=True, use_container_width=True)
+        st.dataframe(df_result,
+                     hide_index=True,
+                     use_container_width=True)
 
 
 if __name__ == "__main__":
