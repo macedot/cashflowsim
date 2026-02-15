@@ -1,9 +1,31 @@
 services:
+  simulation:
+    build: ./simulation
+    restart: always
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '256M'
+
   app1: &app
     restart: always
     build: ./app
     expose:
       - "8501"
+    environment:
+      - SIMULATION_API_URL=http://simulation:8080
     ulimits:
       nproc: 1000000
       nofile:
@@ -14,6 +36,9 @@ services:
         limits:
           cpus: '4'
           memory: '1GB'
+    depends_on:
+      simulation:
+        condition: service_healthy
 
   app2:
     <<: *app
