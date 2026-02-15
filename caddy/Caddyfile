@@ -7,7 +7,10 @@
     reverse_proxy app1:8501 app2:8501 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {header.X-Forwarded-For}
+        header_up X-Forwarded-Proto "http"
         header_up Host {header.Host}
+        header_up Connection "upgrade"
+        header_up Upgrade "websocket"
         transport http {
             keepalive 8s
         }
